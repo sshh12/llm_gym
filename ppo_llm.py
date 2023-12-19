@@ -127,6 +127,7 @@ class MathEnv:
         )[0]
         self.done = False
         self.correct = False
+        self.steps = 0
         return self.state
 
     def step(self, action: int):
@@ -138,8 +139,14 @@ class MathEnv:
             reward = 1.0 if correct else -1.0
             self.correct = correct
             self.done = True
+        elif self.steps > 70:
+            self.done = True
+            self.correct = False
+            print("done failed!", self.tokenizer.decode(self.state))
+            reward = -1.0
         if not self.done:
             self.state = torch.concat([self.state, torch.IntTensor([action])])
+            self.steps += 1
         else:
             self.state = torch.concat(
                 [self.state, torch.IntTensor([self.tokenizer.eos_token_id])]
@@ -168,8 +175,8 @@ class MultiEnv:
 def main(
     model_name_or_path: str = "mistralai/Mistral-7B-Instruct-v0.1",
     learning_rate: float = 2.5e-4,
-    num_steps: int = 50,
-    num_envs: int = 10,
+    num_steps: int = 80,
+    num_envs: int = 16,
     num_iterations: int = 10_000,
     num_minibatches: int = 1,
     update_epochs: int = 1,
@@ -225,8 +232,8 @@ def main(
         obs = []
 
         if anneal_lr:
-            if iteration < 10:
-                lrnow = learning_rate * ((iteration + 1) / 10)
+            if iteration < 50:
+                lrnow = learning_rate * ((iteration + 1) / 50)
             else:
                 frac = 1.0 - (iteration / num_iterations)
                 lrnow = frac * learning_rate
@@ -303,7 +310,7 @@ def main(
             idxs = list(range(1, b_actions.shape[0]))
             import tqdm
 
-            np.random.shuffle(idxs)
+            random.shuffle(idxs)
             for i in tqdm.tqdm(idxs):
                 # print("batch", i)
                 # end = start + envsperbatch
