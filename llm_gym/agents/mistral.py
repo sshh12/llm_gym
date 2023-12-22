@@ -1,10 +1,8 @@
-from typing import Optional
+from typing import Optional, Dict, List
+from dataclasses import dataclass
 
 from torch.distributions.categorical import Categorical
-from transformers import (
-    AutoTokenizer,
-    MistralForCausalLM,
-)
+from transformers import AutoTokenizer, MistralForCausalLM, LlamaTokenizer
 import torch
 import torch.nn as nn
 
@@ -12,8 +10,9 @@ from llm_gym.model_utils import layer_init, fix_tokenizer, make_model_lora
 
 
 class MistralAgent(nn.Module):
-    def __init__(self, model: MistralForCausalLM):
+    def __init__(self, model: MistralForCausalLM, tokenizer: LlamaTokenizer):
         super().__init__()
+        self.tokenizer = tokenizer
         self.llm = model.model.model
         self.lm_head = model.lm_head
         self.critic_head = layer_init(
@@ -21,9 +20,9 @@ class MistralAgent(nn.Module):
             std=1,
         )
 
-    def get_value(self, x, done):
+    def get_value(self, x: Dict):
         outputs = self.llm(
-            input_ids=x,
+            input_ids=x["input_ids"],
             attention_mask=None,
             position_ids=None,
             past_key_values=None,
@@ -36,9 +35,11 @@ class MistralAgent(nn.Module):
         hidden_states = outputs[0]
         return self.critic_head(hidden_states[:, -1].float()).to(self.llm.dtype)
 
-    def get_action_and_value(self, x, done, action=None):
+    def get_action_and_value(
+        self, x: Dict, action: Optional[List[int]] = None, temperature: float = 1.0
+    ):
         outputs = self.llm(
-            input_ids=x,
+            input_ids=x["input_ids"],
             attention_mask=None,
             position_ids=None,
             past_key_values=None,
@@ -50,7 +51,7 @@ class MistralAgent(nn.Module):
         )
 
         hidden_states = outputs[0]
-        logits = self.lm_head(hidden_states[:, -1])
+        logits = self.lm_head(hidden_states[:, -1]) / temperature
         probs = Categorical(logits=logits)
         if action is None:
             action = probs.sample()
@@ -76,7 +77,7 @@ class MistralAgent(nn.Module):
         fix_tokenizer(tokenizer)
         model = MistralForCausalLM.from_pretrained(model_name_or_path)
         model = make_model_lora(model)
-        agent = cls(model)
+        agent = cls(model, tokenizer)
         if device is not None:
             agent.to(device)
         return agent

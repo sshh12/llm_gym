@@ -37,3 +37,14 @@ def make_model_lora(model: Any) -> Any:
     model.to(torch.bfloat16)
     model = get_peft_model(model, lora_config)
     return model
+
+
+def fix_tokenizer(tokenizer):
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.unk_token
+    if tokenizer.mask_token is None:
+        tokenizer.mask_token = tokenizer.unk_token
+    if tokenizer.cls_token is None:
+        tokenizer.cls_token = tokenizer.unk_token
+    if tokenizer.sep_token is None:
+        tokenizer.sep_token = tokenizer.unk_token
