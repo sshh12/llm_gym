@@ -6,24 +6,34 @@ from transformers import AutoTokenizer, MistralForCausalLM, LlamaTokenizer
 import torch
 import torch.nn as nn
 
-from llm_gym.model_utils import layer_init, fix_tokenizer, make_model_lora
+from llm_gym.model_utils import layer_init, fix_tokenizer, load_model_qlora, left_pad
+
+
+class DiagLinear(nn.Linear):
+    def __init__(self, in_features, out_features):
+        super(DiagLinear, self).__init__(in_features, out_features)
+        torch.nn.init.eye_(self.weight)
+        torch.nn.init.zeros_(self.bias)
 
 
 class MistralAgent(nn.Module):
-    def __init__(self, model: MistralForCausalLM, tokenizer: LlamaTokenizer):
+    def __init__(
+        self,
+        model: MistralForCausalLM,
+        value_model: MistralForCausalLM,
+        tokenizer: LlamaTokenizer,
+    ):
         super().__init__()
         self.tokenizer = tokenizer
         self.llm = model.model.model
+        self.value_llm = value_model.model.model
         self.lm_head = model.lm_head
-        self.critic_head = layer_init(
-            nn.Linear(4096, 1),
-            std=1,
-        )
+        self.value_head = nn.Linear(4096, 1).to(self.value_llm.device)
 
     def get_value(self, x: Dict):
-        outputs = self.llm(
+        outputs = self.value_llm(
             input_ids=x["input_ids"],
-            attention_mask=None,
+            attention_mask=x["attention_mask"],
             position_ids=None,
             past_key_values=None,
             inputs_embeds=None,
@@ -33,14 +43,14 @@ class MistralAgent(nn.Module):
             return_dict=False,
         )
         hidden_states = outputs[0]
-        return self.critic_head(hidden_states[:, -1].float()).to(self.llm.dtype)
+        return self.value_head(hidden_states[:, -1])
 
     def get_action_and_value(
         self, x: Dict, action: Optional[List[int]] = None, temperature: float = 1.0
     ):
         outputs = self.llm(
             input_ids=x["input_ids"],
-            attention_mask=None,
+            attention_mask=x["attention_mask"],
             position_ids=None,
             past_key_values=None,
             inputs_embeds=None,
@@ -59,8 +69,20 @@ class MistralAgent(nn.Module):
             action,
             probs.log_prob(action),
             probs.entropy(),
-            self.critic_head(hidden_states[:, -1].float()).to(self.llm.dtype),
+            self.get_value(x),
         )
+
+    def batch_inputs(self, xs: List[Dict]) -> Dict:
+        return {
+            "input_ids": left_pad(
+                [x["input_ids"] for x in xs],
+                self.tokenizer.pad_token_id,
+            ).to(self.llm.device),
+            "attention_mask": left_pad(
+                [x["attention_mask"] for x in xs],
+                0,
+            ).to(self.llm.device),
+        }
 
     @classmethod
     def load_from_path(
@@ -75,9 +97,8 @@ class MistralAgent(nn.Module):
             use_fast=False,
         )
         fix_tokenizer(tokenizer)
-        model = MistralForCausalLM.from_pretrained(model_name_or_path)
-        model = make_model_lora(model)
-        agent = cls(model, tokenizer)
-        if device is not None:
-            agent.to(device)
+
+        value_model = load_model_qlora(MistralForCausalLM, model_name_or_path)
+        model = load_model_qlora(MistralForCausalLM, model_name_or_path)
+        agent = cls(model, value_model, tokenizer)
         return agent
