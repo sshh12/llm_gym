@@ -2,13 +2,6 @@ from typing import List, Any
 
 import torch.nn.functional as F
 import torch
-import numpy as np
-
-
-def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
-    torch.nn.init.orthogonal_(layer.weight, std)
-    torch.nn.init.constant_(layer.bias, bias_const)
-    return layer
 
 
 def _find_all_linear_names(model) -> List[str]:
@@ -62,6 +55,24 @@ def load_model_qlora(model_cls: Any, *args) -> Any:
 
     model = model_cls.from_pretrained(*args, quantization_config=qconfig)
     model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
+    model = get_peft_model(model, config)
+
+    return model
+
+
+def load_lora_model(model_cls: Any, *args) -> Any:
+    from peft import LoraConfig, get_peft_model
+
+    config = LoraConfig(
+        r=64,
+        lora_alpha=32,
+        target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+        lora_dropout=0.05,
+        bias="none",
+        task_type="CAUSAL_LM",
+    )
+
+    model = model_cls.from_pretrained(*args, device_map="cuda")
     model = get_peft_model(model, config)
 
     return model
