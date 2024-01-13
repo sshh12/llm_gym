@@ -1,78 +1,42 @@
 from typing import List, Any
 
+from peft import LoraConfig, get_peft_model
 import torch.nn.functional as F
 import torch
 
 
-def _find_all_linear_names(model) -> List[str]:
-    cls = torch.nn.Linear
-    lora_module_names = set()
-    for name, module in model.named_modules():
-        if isinstance(module, cls):
-            names = name.split(".")
-            lora_module_names.add(names[0] if len(names) == 1 else names[-1])
-
-    if "lm_head" in lora_module_names:
-        lora_module_names.remove("lm_head")
-    return list(lora_module_names)
-
-
-def make_model_lora(model: Any) -> Any:
-    from peft import LoraConfig, get_peft_model
-
-    lora_config = LoraConfig(
-        r=64,
-        lora_alpha=32,
-        target_modules=_find_all_linear_names(model),
-        lora_dropout=0.05,
-        bias="none",
-        task_type="CAUSAL_LM",
-    )
-    model.to(torch.bfloat16)
-    model = get_peft_model(model, lora_config)
+def load_model(model_cls: Any, *args) -> Any:
+    model = model_cls.from_pretrained(*args, device_map="auto")
     return model
 
 
-def load_model_qlora(model_cls: Any, *args) -> Any:
-    from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
-    from transformers import BitsAndBytesConfig
-
-    qconfig = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_compute_dtype=torch.bfloat16,
-    )
-
+def load_lora_model(model_cls: Any, *args) -> Any:
     config = LoraConfig(
-        r=64,
-        lora_alpha=32,
+        r=32,
+        lora_alpha=16,
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
         lora_dropout=0.05,
         bias="none",
         task_type="CAUSAL_LM",
     )
 
-    model = model_cls.from_pretrained(*args, quantization_config=qconfig)
-    model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
+    model = model_cls.from_pretrained(*args, device_map="auto")
     model = get_peft_model(model, config)
 
     return model
 
 
-def load_lora_model(model_cls: Any, *args) -> Any:
-    from peft import LoraConfig, get_peft_model
-
+def load_qlora_model(model_cls: Any, *args) -> Any:
     config = LoraConfig(
-        r=64,
-        lora_alpha=32,
+        r=32,
+        lora_alpha=16,
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
         lora_dropout=0.05,
         bias="none",
         task_type="CAUSAL_LM",
     )
 
-    model = model_cls.from_pretrained(*args, device_map="cuda")
+    model = model_cls.from_pretrained(*args, device_map="auto", load_in_8bit=True)
     model = get_peft_model(model, config)
 
     return model
