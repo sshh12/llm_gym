@@ -51,6 +51,9 @@ class MistralChatAgent(BaseChatAgent):
             self.tokenizer.decode(output[i, prefix:], skip_special_tokens=True).strip()
             for i in range(x["input_ids"].shape[0])
         ]
+        if "" in actions:
+            print("!!!")
+            print(self.tokenizer.batch_decode(output, skip_special_tokens=True))
         return actions
 
     def batch_inputs(self, features: List) -> Dict:
