@@ -1,0 +1,6 @@
+83,84c83,84
+<         if not isinstance(model, PreTrainedModel):
+<             raise ValueError(f"model must be a PreTrainedModel, got {type(model)}")
+---
+>         # if not isinstance(model, PreTrainedModel):
+>         #     raise ValueError(f"model must be a PreTrainedModel, got {type(model)}")

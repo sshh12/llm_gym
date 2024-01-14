@@ -106,6 +106,7 @@ def main(
         tokenizer=agent.tokenizer,
         args=trainer_config,
         data_collator=agent.batch_inputs,
+        max_steps=training_args.num_iterations,
     )
 
     for iteration in range(training_args.num_iterations):

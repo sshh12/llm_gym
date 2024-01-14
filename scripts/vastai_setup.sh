@@ -3,7 +3,7 @@
 apt-get update && apt-get install -y git curl nano wget unzip rsync jq
 
 git clone https://github.com/sshh12/llm_gym \
-        && cd multi_token \
+        && cd llm_gym \
         && pip install -r requirements.txt \
         && pip install -e .
 
