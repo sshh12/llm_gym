@@ -39,7 +39,8 @@ class PythonMetaMathGPTEvalHintsEnv(MultiTurnWithHintsEnv):
     def generate_prompt(self) -> str:
         loader = get_question_loader()
         question = loader.get_question()
-        prompt = PYTHON_PREFIX + f"\n\n{question['query']}?"
+        self.query = question["query"]
+        prompt = PYTHON_PREFIX + f"\n\n{self.query}?"
         self.answer = question["response"]
         self.hint = "Hint: Think step by step"
         # self.examples.append(
@@ -68,7 +69,7 @@ class PythonMetaMathGPTEvalHintsEnv(MultiTurnWithHintsEnv):
         return f"output:\n```{out}```"
 
     def score_response(self, action: str) -> float:
-        prompt = f"You are evaluating an assistants response to a question. \n\nAssistant Answer: {action}\n\nCorrect Answer: {self.answer}.\nDid the assistant get the answer correct?"
+        prompt = f"You are evaluating an assistants response to a question. Question: {self.query}\n\nAssistant Answer: {action}\n\nCorrect Answer: {self.answer}.\nDid the assistant get the answer correct?"
         resp = get_openai_structured_response(
             prompt,
             {
