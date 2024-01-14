@@ -46,7 +46,7 @@ def load_qlora_model(model_cls: Any, *args, **kwargs) -> Any:
     load_kwargs.update(kwargs)
 
     model = model_cls.from_pretrained(*args, **load_kwargs)
-    model = get_peft_model(model, config)
+    # model = get_peft_model(model, config)
 
     return model
 

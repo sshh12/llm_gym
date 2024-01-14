@@ -4,8 +4,9 @@ import re
 from transformers import (
     AutoTokenizer,
     MistralForCausalLM,
-    LlamaTokenizer,
+    PreTrainedTokenizer,
     DataCollatorForLanguageModeling,
+    AutoModelForCausalLM,
 )
 import torch
 
@@ -26,7 +27,7 @@ class MistralChatAgent(BaseChatAgent):
     def __init__(
         self,
         model: MistralForCausalLM,
-        tokenizer: LlamaTokenizer,
+        tokenizer: PreTrainedTokenizer,
     ):
         super().__init__()
         self.tokenizer = tokenizer
@@ -35,6 +36,9 @@ class MistralChatAgent(BaseChatAgent):
         self.data_collator = DataCollatorForLanguageModeling(self.tokenizer, mlm=False)
 
     def generate(self, x: Dict, max_new_tokens: int = 100) -> List[str]:
+        import time
+
+        start = time.time()
         output = self.model.generate(
             inputs=x["input_ids"].to(self.device),
             attention_mask=x["attention_mask"].to(self.device),
@@ -51,6 +55,8 @@ class MistralChatAgent(BaseChatAgent):
             self.tokenizer.decode(output[i, prefix:], skip_special_tokens=True).strip()
             for i in range(x["input_ids"].shape[0])
         ]
+        elapsed = time.time() - start
+        print(output[0, prefix:].shape[0] / elapsed)
         return actions
 
     def batch_inputs(self, features: List) -> Dict:
@@ -112,7 +118,7 @@ class MistralChatAgent(BaseChatAgent):
         )
         fix_tokenizer(tokenizer)
 
-        model = load_model(MistralForCausalLM, model_name_or_path)
+        model = load_model(AutoModelForCausalLM, model_name_or_path)
         agent = cls(model, tokenizer)
         return agent
 
@@ -129,7 +135,7 @@ class MistralLoRAChatAgent(MistralChatAgent):
         )
         fix_tokenizer(tokenizer)
 
-        model = load_lora_model(MistralForCausalLM, model_name_or_path)
+        model = load_lora_model(AutoModelForCausalLM, model_name_or_path)
         agent = cls(model, tokenizer)
         return agent
 
@@ -142,10 +148,14 @@ class MistralQLoRAChatAgent(MistralChatAgent):
     ) -> "MistralChatAgent":
         tokenizer = AutoTokenizer.from_pretrained(
             model_name_or_path,
-            use_fast=False,
         )
         fix_tokenizer(tokenizer)
 
-        model = load_qlora_model(MistralForCausalLM, model_name_or_path)
+        model = load_qlora_model(
+            AutoModelForCausalLM,
+            model_name_or_path,
+            torch_dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2",
+        )
         agent = cls(model, tokenizer)
         return agent
