@@ -157,7 +157,7 @@ if __name__ == "__main__":
 
     parser = transformers.HfArgumentParser((TrainArguments, ModelArguments))
 
-    training_args, model_args = parser.parse_args_into_dataclasses(
+    training_args, model_args, _ = parser.parse_args_into_dataclasses(
         return_remaining_strings=True
     )
 
