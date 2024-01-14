@@ -42,15 +42,15 @@ class PythonMetaMathGPTEvalHintsEnv(MultiTurnWithHintsEnv):
         prompt = PYTHON_PREFIX + f"\n\n{question['query']}?"
         self.answer = question["response"]
         self.hint = "Hint: Think step by step"
-        self.examples.append(
-            EnvExample(
-                chat=[
-                    {"role": "user", "content": prompt},
-                    {"role": "assistant", "content": self.answer},
-                ],
-                reward=1.0,
-            )
-        )
+        # self.examples.append(
+        #     EnvExample(
+        #         chat=[
+        #             {"role": "user", "content": prompt},
+        #             {"role": "assistant", "content": self.answer},
+        #         ],
+        #         reward=1.0,
+        #     )
+        # )
         return prompt
 
     def generate_hint(self) -> str:
