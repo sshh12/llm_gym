@@ -10,7 +10,7 @@ import wandb
 
 from llm_gym.agents import CHAT_MODEL_NAME_TO_CLASS
 from llm_gym.envs.basic_math_envs import PythonMathHintsEnv
-from llm_gym.envs.meta_math_qa import PythonMetaMathGPTEvalHintsEnv
+from llm_gym.envs.meta_math_qa import MetaMathGPTEvalHintsEnv
 from llm_gym.envs.env_utils import aggregate_stats
 
 
@@ -57,8 +57,7 @@ class ModelArguments:
 
 def sample_policy(training_args, agent) -> List:
     envs = [
-        PythonMetaMathGPTEvalHintsEnv(max_attempts=3)
-        for _ in range(training_args.num_envs)
+        MetaMathGPTEvalHintsEnv(max_attempts=3) for _ in range(training_args.num_envs)
     ]
     for env in envs:
         env.reset()

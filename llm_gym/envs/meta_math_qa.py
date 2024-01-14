@@ -5,18 +5,9 @@ from functools import lru_cache
 from datasets import load_dataset
 
 from llm_gym.envs.env_utils import (
-    run_python_code_unsafe,
     get_openai_structured_response,
 )
 from llm_gym.envs.base_envs import MultiTurnWithHintsEnv, EnvExample
-
-
-PYTHON_PREFIX = """You are an expert assistant that can run python to help answer questions.
-
-Use this format for running code if needed and wait for the user to respond with the results:
-```python
-# your code
-```"""
 
 
 class MetaMathQuestionLoader:
@@ -35,7 +26,7 @@ def get_question_loader():
     return MetaMathQuestionLoader()
 
 
-class PythonMetaMathGPTEvalHintsEnv(MultiTurnWithHintsEnv):
+class MetaMathGPTEvalHintsEnv(MultiTurnWithHintsEnv):
     def generate_prompt(self) -> str:
         loader = get_question_loader()
         question = loader.get_question()
@@ -58,15 +49,10 @@ class PythonMetaMathGPTEvalHintsEnv(MultiTurnWithHintsEnv):
         return self.hint
 
     def has_final_result(self, action: str) -> bool:
-        has_code_block = (
-            len(re.findall(r"```python\n(.*?)\n```", action, re.DOTALL)) > 0
-        )
-        return not has_code_block or len(self.cur_chat) > 2
+        return True
 
     def generate_response(self, action: str) -> str:
-        code = re.findall(r"```python\n(.*?)\n```", action, re.DOTALL)[0]
-        out = run_python_code_unsafe(code)
-        return f"output:\n```{out}```"
+        raise Exception()
 
     def score_response(self, action: str) -> float:
         if len(action.strip()) == 0:
