@@ -31,9 +31,9 @@ class MetaMathGPTEvalHintsEnv(MultiTurnWithHintsEnv):
         loader = get_question_loader()
         question = loader.get_question()
         self.query = question["query"]
-        prompt = PYTHON_PREFIX + f"\n\n{self.query}?"
         self.answer = question["response"]
         self.hint = "Hint: Think step by step"
+        prompt = self.query
         # self.examples.append(
         #     EnvExample(
         #         chat=[
