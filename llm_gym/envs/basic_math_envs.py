@@ -32,7 +32,7 @@ class PythonMathHintsEnv(MultiTurnWithHintsEnv):
         return (
             not has_code_block
             or len(self.cur_chat) > 2
-            or str(self.answer) in repr(self.cur_chat).replace(",", "")
+            or str(self.answer) in (repr(self.cur_chat) + action).replace(",", "")
         )
 
     def generate_response(self, action: str) -> str:
@@ -41,4 +41,6 @@ class PythonMathHintsEnv(MultiTurnWithHintsEnv):
         return f"output:\n```{out}```"
 
     def score_response(self, action: str) -> float:
-        return float(str(self.answer) in action.replace(",", ""))
+        return float(
+            str(self.answer) in (repr(self.cur_chat) + action).replace(",", "")
+        )
