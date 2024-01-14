@@ -23,7 +23,7 @@ class PythonMathHintsEnv(MultiTurnWithHintsEnv):
         return prompt
 
     def generate_hint(self) -> str:
-        return "Hint: Use a python code block to run code and print the results. Wait for the results to be provided by the user before answering. Be sure to print() the results."
+        return "Hint: Use a python code block to run code and print the results. Wait for the results to be provided by the user before answering. Be sure to print() the results and repeat the answer after computing it."
 
     def has_final_result(self, action: str) -> bool:
         has_code_block = (
