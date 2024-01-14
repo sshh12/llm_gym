@@ -8,7 +8,7 @@ from llm_gym.envs.env_utils import (
     run_python_code_unsafe,
     get_openai_structured_response,
 )
-from llm_gym.envs.base_envs import MultiTurnWithHintsEnv
+from llm_gym.envs.base_envs import MultiTurnWithHintsEnv, EnvExample
 
 
 PYTHON_PREFIX = """You are an expert assistant that can run python to help answer questions.
@@ -42,6 +42,15 @@ class PythonMetaMathGPTEvalHintsEnv(MultiTurnWithHintsEnv):
         prompt = PYTHON_PREFIX + f"\n\n{question['query']}?"
         self.answer = question["response"]
         self.hint = "Hint: Think step by step"
+        self.examples.append(
+            EnvExample(
+                chat=[
+                    {"role": "user", "content": prompt},
+                    {"role": "assistant", "content": self.answer},
+                ],
+                reward=1.0,
+            )
+        )
         return prompt
 
     def generate_hint(self) -> str:
@@ -59,7 +68,7 @@ class PythonMetaMathGPTEvalHintsEnv(MultiTurnWithHintsEnv):
         return f"output:\n```{out}```"
 
     def score_response(self, action: str) -> float:
-        prompt = f"You are evaluating an assistants response to a question. \n\nAssistant: {action}\n\nCorrect Answer: {self.answer}.\nDid the assistant get the answer correct?"
+        prompt = f"You are evaluating an assistants response to a question. \n\nAssistant Answer: {action}\n\nCorrect Answer: {self.answer}.\nDid the assistant get the answer correct?"
         resp = get_openai_structured_response(
             prompt,
             {
@@ -80,7 +89,6 @@ class PythonMetaMathGPTEvalHintsEnv(MultiTurnWithHintsEnv):
                 },
             },
         )
-        print(prompt, resp)
         if "hint" in resp:
             self.hint = "Hint: " + resp["hint"]
         return float(resp["is_correct"])
