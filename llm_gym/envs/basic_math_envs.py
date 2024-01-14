@@ -27,11 +27,13 @@ class PythonMathHintsEnv(MultiTurnWithHintsEnv):
         return "Hint: Use a python code block to run code and print the results. Wait for the results to be provided by the user before answering. Be sure to print() the results."
 
     def has_final_result(self, action: str) -> bool:
-        has_code_block = len(re.findall(r"```python\n(.*)\n```", action, re.DOTALL)) > 0
+        has_code_block = (
+            len(re.findall(r"```python\n(.*?)\n```", action, re.DOTALL)) > 0
+        )
         return not has_code_block or len(self.cur_chat) > 2
 
     def generate_response(self, action: str) -> str:
-        code = re.findall(r"```python\n(.*)\n```", action, re.DOTALL)[0]
+        code = re.findall(r"```python\n(.*?)\n```", action, re.DOTALL)[0]
         out = run_python_code_unsafe(code)
         return out
 
