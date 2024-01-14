@@ -5,28 +5,34 @@ import torch.nn.functional as F
 import torch
 
 
-def load_model(model_cls: Any, *args) -> Any:
-    model = model_cls.from_pretrained(*args, device_map="auto")
+def load_model(model_cls: Any, *args, **kwargs) -> Any:
+    load_kwargs = dict(device_map="auto")
+    load_kwargs.update(kwargs)
+    model = model_cls.from_pretrained(*args, **load_kwargs)
     return model
 
 
-def load_lora_model(model_cls: Any, *args) -> Any:
+def load_lora_model(model_cls: Any, *args, **kwargs) -> Any:
+    lora_target_modules = kwargs.pop(
+        "lora_target_modules", ["q_proj", "k_proj", "v_proj", "o_proj"]
+    )
     config = LoraConfig(
         r=32,
         lora_alpha=16,
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+        target_modules=lora_target_modules,
         lora_dropout=0.05,
         bias="none",
         task_type="CAUSAL_LM",
     )
-
-    model = model_cls.from_pretrained(*args, device_map="auto")
+    load_kwargs = dict(device_map="auto")
+    load_kwargs.update(kwargs)
+    model = model_cls.from_pretrained(*args, **load_kwargs)
     model = get_peft_model(model, config)
 
     return model
 
 
-def load_qlora_model(model_cls: Any, *args) -> Any:
+def load_qlora_model(model_cls: Any, *args, **kwargs) -> Any:
     config = LoraConfig(
         r=32,
         lora_alpha=16,
@@ -36,7 +42,10 @@ def load_qlora_model(model_cls: Any, *args) -> Any:
         task_type="CAUSAL_LM",
     )
 
-    model = model_cls.from_pretrained(*args, device_map="auto", load_in_8bit=True)
+    load_kwargs = dict(device_map="auto", load_in_8bit=True)
+    load_kwargs.update(kwargs)
+
+    model = model_cls.from_pretrained(*args, **load_kwargs)
     model = get_peft_model(model, config)
 
     return model

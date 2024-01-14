@@ -6,13 +6,10 @@ from trl import IterativeSFTTrainer
 import transformers
 import torch
 import tqdm
-import random
 import wandb
 
-from llm_gym.agents.mistral import MistralQLoRAChatAgent
-
-# from llm_gym.envs.math_basic import MathBasicEnv
-from llm_gym.envs.math_funcs import PythonMathHintsEnv
+from llm_gym.agents.mistral_agents import MistralQLoRAChatAgent
+from llm_gym.envs.basic_math_envs import PythonMathHintsEnv
 from llm_gym.envs.env_utils import aggregate_stats
 
 
@@ -31,12 +28,24 @@ class TrainArguments:
     )
     inference_max_new_tokens: int = field(default=2048)
 
+    bf16: bool = field(
+        default=False,
+        metadata={
+            "help": (
+                "Whether to use bf16 (mixed) precision instead of 32-bit. Requires Ampere or higher NVIDIA"
+                " architecture or using CPU (use_cpu) or Ascend NPU. This is an experimental API and it may change."
+            )
+        },
+    )
+    max_grad_norm: float = field(default=1.0, metadata={"help": "Max gradient norm."})
     per_device_train_batch_size: int = field(default=1)
     per_iteration_train_epochs: int = field(default=1)
     gradient_accumulation_steps: int = field(default=16)
     lr: float = field(
         default=1e-4, metadata={"help": "Learning rate for the optimizer."}
     )
+
+    wandb_project: str = field(default="llm_gym")
 
 
 def sample_policy(training_args, agent) -> List:
@@ -56,15 +65,14 @@ def sample_policy(training_args, agent) -> List:
                 ready_envs = ready_envs[batch_size:]
                 yield batch_envs
 
-    with torch.no_grad():
-        for batch_envs in tqdm.tqdm(yield_ready_envs(), unit="inference_batch"):
-            batch_obs = [agent.encode_chat(env.observe()) for env in batch_envs]
-            results = agent.generate(
-                agent.batch_inputs(batch_obs),
-                max_new_tokens=training_args.inference_max_new_tokens,
-            )
-            for i, env in enumerate(batch_envs):
-                env.step(results[i])
+    for batch_envs in tqdm.tqdm(yield_ready_envs(), unit="inference_batch"):
+        batch_obs = [agent.encode_chat(env.observe()) for env in batch_envs]
+        results = agent.generate(
+            agent.batch_inputs(batch_obs),
+            max_new_tokens=training_args.inference_max_new_tokens,
+        )
+        for i, env in enumerate(batch_envs):
+            env.step(results[i])
 
     stats = aggregate_stats([env.get_stats() for env in envs])
 
@@ -76,18 +84,17 @@ def main(
 ):
     agent = MistralQLoRAChatAgent.load_from_path()
 
-    wandb.init(project="llm_gym2", config=training_args.__dict__)
+    wandb.init(project=training_args.wandb_project, config=training_args.__dict__)
 
     trainer_config = transformers.TrainingArguments(
-        output_dir="/data/llm_gym_train",
+        output_dir="/tmp/llm_gym_output",
         lr_scheduler_type="constant",
-        max_grad_norm=1.0,
+        max_grad_norm=training_args.max_grad_norm,
         remove_unused_columns=False,
         learning_rate=training_args.lr,
         per_device_train_batch_size=training_args.per_device_train_batch_size,
         gradient_accumulation_steps=training_args.gradient_accumulation_steps,
-        bf16=True,
-        tf32=True,
+        bf16=training_args.bf16,
         num_train_epochs=training_args.per_iteration_train_epochs,
         logging_steps=1,
         report_to=[],
@@ -103,14 +110,16 @@ def main(
 
     for iteration in range(training_args.num_iterations):
         trainer.model.eval()
+        torch.cuda.empty_cache()
 
-        envs, stats = sample_policy(training_args, agent)
+        with torch.no_grad():
+            envs, stats = sample_policy(training_args, agent)
 
         examples = []
         for env in envs:
             for ex in env.to_examples():
-                if ex["reward"] > 0.0:
-                    examples.append(agent.encode_chat_with_labels(ex["chat"]))
+                if ex.reward > 0.0:
+                    examples.append(agent.encode_chat_with_labels(ex.chat))
 
         trainer.step(
             input_ids=[ex["input_ids"] for ex in examples],

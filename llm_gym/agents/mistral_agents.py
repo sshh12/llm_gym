@@ -53,7 +53,7 @@ class MistralChatAgent(BaseChatAgent):
         ]
         return actions
 
-    def batch_inputs(self, features) -> Dict:
+    def batch_inputs(self, features: List) -> Dict:
         return self.data_collator(features)
 
     def encode_chat(self, chat: List[Dict]) -> Dict:
