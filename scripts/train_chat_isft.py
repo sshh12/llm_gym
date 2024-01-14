@@ -99,6 +99,7 @@ def main(
         logging_steps=1,
         report_to=[],
         evaluation_strategy="no",
+        max_steps=training_args.num_iterations,
     )
 
     trainer = IterativeSFTTrainer(
@@ -106,7 +107,6 @@ def main(
         tokenizer=agent.tokenizer,
         args=trainer_config,
         data_collator=agent.batch_inputs,
-        max_steps=training_args.num_iterations,
     )
 
     for iteration in range(training_args.num_iterations):
