@@ -28,15 +28,7 @@ class TrainArguments:
     )
     inference_max_new_tokens: int = field(default=2048)
 
-    bf16: bool = field(
-        default=False,
-        metadata={
-            "help": (
-                "Whether to use bf16 (mixed) precision instead of 32-bit. Requires Ampere or higher NVIDIA"
-                " architecture or using CPU (use_cpu) or Ascend NPU. This is an experimental API and it may change."
-            )
-        },
-    )
+    bf16: bool = field(default=False, metadata={"help": "NVidia BF16 mode."})
     max_grad_norm: float = field(default=1.0, metadata={"help": "Max gradient norm."})
     per_device_train_batch_size: int = field(default=1)
     per_iteration_train_epochs: int = field(default=1)
