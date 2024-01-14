@@ -41,10 +41,11 @@ class PythonMetaMathGPTEvalHintsEnv(MultiTurnWithHintsEnv):
         question = loader.get_question()
         prompt = PYTHON_PREFIX + f"\n\n{question['query']}?"
         self.answer = question["response"]
+        self.hint = "Hint: Think step by step"
         return prompt
 
     def generate_hint(self) -> str:
-        return "Hint: Think step by step"
+        return self.hint
 
     def has_final_result(self, action: str) -> bool:
         has_code_block = (
@@ -60,6 +61,7 @@ class PythonMetaMathGPTEvalHintsEnv(MultiTurnWithHintsEnv):
     def score_response(self, action: str) -> float:
         prompt = f"You are evaluating an assistants response to a question. \n\nAssistant: {action}\n\nCorrect Answer: {self.answer}.\nDid the assistant get the answer correct?"
         resp = get_openai_structured_response(
+            prompt,
             {
                 "name": "score_response",
                 "parameters": {
@@ -69,10 +71,16 @@ class PythonMetaMathGPTEvalHintsEnv(MultiTurnWithHintsEnv):
                             "type": "boolean",
                             "description": "Are the responses roughly the same?",
                         },
+                        "hint": {
+                            "type": "string",
+                            "description": "Provide a hint to the assistant.",
+                        },
                     },
                     "required": ["is_correct"],
                 },
             },
         )
         print(prompt, resp)
+        if "hint" in resp:
+            self.hint = "Hint: " + resp["hint"]
         return float(resp["is_correct"])
