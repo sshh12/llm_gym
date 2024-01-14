@@ -46,7 +46,6 @@ class MultiTurnWithHintsEnv(BaseEnv):
         return float(self.correct)
 
     def step(self, action: str):
-        print(self.cur_chat, action)
         if not self.has_final_result(action):
             user_resp = self.generate_response(action)
             self.cur_chat.extend(
@@ -68,7 +67,7 @@ class MultiTurnWithHintsEnv(BaseEnv):
                 if self.attempts == 0:
                     self.correct_first_attempt = True
                 self.done = True
-                print(self.cur_chat, action, score)
+                print(self.cur_chat, repr(action), score)
             elif self.attempts + 1 < self.max_attempts:
                 self.cur_chat = [
                     {
@@ -78,7 +77,7 @@ class MultiTurnWithHintsEnv(BaseEnv):
                 ]
             else:
                 self.done = True
-                print(self.cur_chat, action, score)
+                print(self.cur_chat, repr(action), score)
             self.attempts += 1
 
     def get_stats(self) -> Dict:
