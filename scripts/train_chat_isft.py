@@ -8,7 +8,7 @@ import torch
 import tqdm
 import wandb
 
-from llm_gym.agents.mistral_agents import MistralQLoRAChatAgent
+from llm_gym.agents import CHAT_MODEL_NAME_TO_CLASS
 from llm_gym.envs.basic_math_envs import PythonMathHintsEnv
 from llm_gym.envs.env_utils import aggregate_stats
 
@@ -16,28 +16,42 @@ from llm_gym.envs.env_utils import aggregate_stats
 @dataclass
 class TrainArguments:
     num_iterations: int = field(
-        default=10_000, metadata={"help": "Number of training iterations."}
+        default=100_000, metadata={"help": "Number of training iterations."}
     )
-
     num_envs: int = field(
         default=16, metadata={"help": "Target number of environments."}
     )
+
     inference_batch_size: int = field(
         default=1,
         metadata={"help": "Max number of environments to run at the same time"},
     )
-    inference_max_new_tokens: int = field(default=2048)
-
-    bf16: bool = field(default=False, metadata={"help": "NVidia BF16 mode."})
-    max_grad_norm: float = field(default=1.0, metadata={"help": "Max gradient norm."})
     per_device_train_batch_size: int = field(default=1)
     per_iteration_train_epochs: int = field(default=1)
     gradient_accumulation_steps: int = field(default=16)
+    inference_max_new_tokens: int = field(default=2048)
+
+    bf16: bool = field(default=False, metadata={"help": "NVIDIA BF16 mode."})
+    tf32: bool = field(default=False, metadata={"help": "NVIDIA TF32 mode."})
+
     lr: float = field(
         default=1e-4, metadata={"help": "Learning rate for the optimizer."}
     )
+    max_grad_norm: float = field(default=1.0, metadata={"help": "Max gradient norm."})
 
     wandb_project: str = field(default="llm_gym")
+
+
+@dataclass
+class ModelArguments:
+    model_cls: str = field(
+        default="MistralQLoRAChatAgent",
+        metadata={"help": "Model class to use for chat."},
+    )
+    model_name_or_path: str = field(
+        default=None,
+        metadata={"help": "Model name or path to load."},
+    )
 
 
 def sample_policy(training_args, agent) -> List:
@@ -73,10 +87,13 @@ def sample_policy(training_args, agent) -> List:
 
 def main(
     training_args: TrainArguments,
+    model_args: ModelArguments,
 ):
-    agent = MistralQLoRAChatAgent.load_from_path()
-
-    wandb.init(project=training_args.wandb_project, config=training_args.__dict__)
+    agent_cls = CHAT_MODEL_NAME_TO_CLASS[model_args.model_cls]
+    agent_args = dict()
+    if model_args.model_name_or_path is not None:
+        agent_args["model_name_or_path"] = model_args.model_name_or_path
+    agent = agent_cls.load_from_path(**agent_args)
 
     trainer_config = transformers.TrainingArguments(
         output_dir="/tmp/llm_gym_output",
@@ -87,6 +104,7 @@ def main(
         per_device_train_batch_size=training_args.per_device_train_batch_size,
         gradient_accumulation_steps=training_args.gradient_accumulation_steps,
         bf16=training_args.bf16,
+        tf32=training_args.tf32,
         num_train_epochs=training_args.per_iteration_train_epochs,
         logging_steps=1,
         report_to=[],
@@ -99,6 +117,11 @@ def main(
         tokenizer=agent.tokenizer,
         args=trainer_config,
         data_collator=agent.batch_inputs,
+    )
+
+    wandb.init(
+        project=training_args.wandb_project,
+        config={**training_args.__dict__, **model_args.__dict__},
     )
 
     for iteration in range(training_args.num_iterations):
@@ -132,8 +155,10 @@ def main(
 if __name__ == "__main__":
     logging.getLogger().setLevel(logging.INFO)
 
-    parser = transformers.HfArgumentParser((TrainArguments,))
+    parser = transformers.HfArgumentParser((TrainArguments, ModelArguments))
 
-    training_args, _ = parser.parse_args_into_dataclasses(return_remaining_strings=True)
+    training_args, model_args = parser.parse_args_into_dataclasses(
+        return_remaining_strings=True
+    )
 
-    main(training_args)
+    main(training_args, model_args)
