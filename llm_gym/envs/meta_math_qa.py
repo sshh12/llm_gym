@@ -69,6 +69,8 @@ class PythonMetaMathGPTEvalHintsEnv(MultiTurnWithHintsEnv):
         return f"output:\n```{out}```"
 
     def score_response(self, action: str) -> float:
+        if len(action.strip()) == 0:
+            return 0.0
         prompt = f"You are evaluating an assistants response to a question. Question: {self.query}\n\nAssistant Answer: {action}\n\nCorrect Answer: {self.answer}.\nDid the assistant get the answer correct?"
         resp = get_openai_structured_response(
             prompt,
