@@ -34,7 +34,7 @@ class PythonMathHintsEnv(MultiTurnWithHintsEnv):
     def generate_response(self, action: str) -> str:
         code = re.findall(r"```python\n(.*?)\n```", action, re.DOTALL)[0]
         out = run_python_code_unsafe(code)
-        return out
+        return f"output:\n```{out}```"
 
     def score_response(self, action: str) -> float:
         return float(str(self.answer) in action.replace(",", ""))
