@@ -6,7 +6,7 @@ import torch
 
 
 def load_model(model_cls: Any, *args, **kwargs) -> Any:
-    load_kwargs = dict(device_map="auto")
+    load_kwargs = dict()
     load_kwargs.update(kwargs)
     model = model_cls.from_pretrained(*args, **load_kwargs)
     return model

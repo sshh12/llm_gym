@@ -1,4 +1,6 @@
 from typing import Dict, List
+import openai
+import json
 
 
 def run_python_code_unsafe(code: str) -> str:
@@ -32,3 +34,22 @@ def aggregate_stats(stats: List[Dict]) -> Dict:
         agg_stats[k + "_nunique"] = len(set([s[k] for s in stats]))
         agg_stats[k + "_examples"] = [repr(s[k]) for s in stats][:10]
     return agg_stats
+
+
+def get_openai_structured_response(prompt: str, function: Dict) -> Dict:
+    name = function["name"]
+    client = openai.OpenAI()
+    chat_args = dict(
+        model="gpt-3.5-turbo",
+        temperature=0.0,
+        tools=[{"type": "function", "function": function}],
+        tool_choice={"type": "function", "function": {"name": name}},
+    )
+    chat = [
+        dict(
+            role="system",
+            content=prompt,
+        )
+    ]
+    resp = client.chat.completions.create(messages=chat, **chat_args)
+    return json.loads(resp.choices[0].message.tool_calls[0].function.arguments)
