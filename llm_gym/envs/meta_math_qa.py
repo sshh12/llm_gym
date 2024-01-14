@@ -82,7 +82,7 @@ class PythonMetaMathGPTEvalHintsEnv(MultiTurnWithHintsEnv):
                         },
                         "hint": {
                             "type": "string",
-                            "description": "Provide a hint to the assistant.",
+                            "description": "Provide a useful hint to the assistant.",
                         },
                     },
                     "required": ["is_correct"],
