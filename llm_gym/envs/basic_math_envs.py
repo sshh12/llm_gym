@@ -23,13 +23,17 @@ class PythonMathHintsEnv(MultiTurnWithHintsEnv):
         return prompt
 
     def generate_hint(self) -> str:
-        return "Hint: Use a python code block to run code and print the results. Wait for the results to be provided by the user before answering. Be sure to print() the results and repeat the answer after computing it."
+        return "Hint: Use a python code block to run code and print the results. Wait for the results to be provided by the user before answering. Be sure to print() the results."
 
     def has_final_result(self, action: str) -> bool:
         has_code_block = (
             len(re.findall(r"```python\n(.*?)\n```", action, re.DOTALL)) > 0
         )
-        return not has_code_block or len(self.cur_chat) > 2
+        return (
+            not has_code_block
+            or len(self.cur_chat) > 2
+            or self.answer in action.replace(",", "")
+        )
 
     def generate_response(self, action: str) -> str:
         code = re.findall(r"```python\n(.*?)\n```", action, re.DOTALL)[0]
