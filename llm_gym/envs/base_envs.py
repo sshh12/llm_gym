@@ -68,6 +68,7 @@ class MultiTurnWithHintsEnv(BaseEnv):
                 if self.attempts == 0:
                     self.correct_first_attempt = True
                 self.done = True
+                print(self.cur_chat, action, score)
             elif self.attempts + 1 < self.max_attempts:
                 self.cur_chat = [
                     {
@@ -77,6 +78,7 @@ class MultiTurnWithHintsEnv(BaseEnv):
                 ]
             else:
                 self.done = True
+                print(self.cur_chat, action, score)
             self.attempts += 1
 
     def get_stats(self) -> Dict:
