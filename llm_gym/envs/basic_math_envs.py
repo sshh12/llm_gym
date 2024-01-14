@@ -32,7 +32,7 @@ class PythonMathHintsEnv(MultiTurnWithHintsEnv):
         return (
             not has_code_block
             or len(self.cur_chat) > 2
-            or self.answer in repr(self.cur_chat)
+            or self.answer in repr(self.cur_chat).replace(",", "")
         )
 
     def generate_response(self, action: str) -> str:
