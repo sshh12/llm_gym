@@ -69,6 +69,7 @@ class MultiTurnWithHintsEnv(BaseEnv):
                 self.done = True
                 print(self.cur_chat, repr(action), score)
             elif self.attempts + 1 < self.max_attempts:
+                print(self.cur_chat, repr(action), score, "retry")
                 self.cur_chat = [
                     {
                         "role": "user",
