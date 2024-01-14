@@ -5,8 +5,7 @@ from llm_gym.envs.env_utils import run_python_code_unsafe
 from llm_gym.envs.base_envs import MultiTurnWithHintsEnv
 
 
-PYTHON_PREFIX = """
-You are an expert assistant that can run python to help answer questions.
+PYTHON_PREFIX = """You are an expert assistant that can run python to help answer questions.
 
 Use this format for running code if needed and wait for the user to respond with the results:
 ```python
