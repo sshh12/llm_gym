@@ -7,7 +7,7 @@ from datasets import load_dataset
 from llm_gym.envs.env_utils import (
     get_openai_structured_response,
 )
-from llm_gym.envs.base_envs import MultiTurnWithHintsEnv, EnvExample
+from llm_gym.envs.base_envs import SingleTurnWithHintsEnv, EnvExample
 
 
 class MetaMathQuestionLoader:
@@ -26,7 +26,7 @@ def get_question_loader():
     return MetaMathQuestionLoader()
 
 
-class MetaMathGPTEvalHintsEnv(MultiTurnWithHintsEnv):
+class MetaMathGPTEvalHintsEnv(SingleTurnWithHintsEnv):
     def generate_prompt(self) -> str:
         loader = get_question_loader()
         question = loader.get_question()
@@ -48,36 +48,33 @@ class MetaMathGPTEvalHintsEnv(MultiTurnWithHintsEnv):
     def generate_hint(self) -> str:
         return self.hint
 
-    def has_final_result(self, action: str) -> bool:
-        return True
-
-    def generate_response(self, action: str) -> str:
-        raise Exception()
-
     def score_response(self, action: str) -> float:
         if len(action.strip()) == 0:
             return 0.0
         prompt = f"You are evaluating an assistants response to a question. Question: {self.query}\n\nAssistant Answer: {action}\n\nCorrect Answer: {self.answer}.\nDid the assistant get the answer correct?"
-        resp = get_openai_structured_response(
-            prompt,
-            {
-                "name": "score_response",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "is_correct": {
-                            "type": "boolean",
-                            "description": "Are the responses roughly the same?",
+        try:
+            resp = get_openai_structured_response(
+                prompt,
+                {
+                    "name": "score_response",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "is_correct": {
+                                "type": "boolean",
+                                "description": "Are the responses roughly the same?",
+                            },
+                            "hint": {
+                                "type": "string",
+                                "description": "Provide a useful hint to the assistant.",
+                            },
                         },
-                        "hint": {
-                            "type": "string",
-                            "description": "Provide a useful hint to the assistant.",
-                        },
+                        "required": ["is_correct"],
                     },
-                    "required": ["is_correct"],
                 },
-            },
-        )
-        if "hint" in resp:
-            self.hint = "Hint: " + resp["hint"]
-        return float(resp["is_correct"])
+            )
+            if "hint" in resp:
+                self.hint = "Hint: " + resp["hint"]
+            return float(resp["is_correct"])
+        except Exception:
+            return 0.0

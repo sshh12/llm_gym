@@ -57,7 +57,7 @@ class ModelArguments:
 
 def sample_policy(training_args, agent) -> List:
     envs = [
-        MetaMathGPTEvalHintsEnv(max_attempts=3) for _ in range(training_args.num_envs)
+        MetaMathGPTEvalHintsEnv(max_attempts=2) for _ in range(training_args.num_envs)
     ]
     for env in envs:
         env.reset()
@@ -69,10 +69,8 @@ def sample_policy(training_args, agent) -> List:
                 if env.is_done() or not env.is_ready():
                     continue
                 ready_envs.append(env)
-            while len(ready_envs) > 0:
-                batch_envs = ready_envs[:batch_size]
-                ready_envs = ready_envs[batch_size:]
-                yield batch_envs
+            batch_envs = ready_envs[:batch_size]
+            yield batch_envs
 
     for batch_envs in tqdm.tqdm(yield_ready_envs(), unit="inference_batch"):
         batch_obs = [agent.encode_chat(env.observe()) for env in batch_envs]

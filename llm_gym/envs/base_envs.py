@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import List, Dict
-from abc import ABC
+from abc import ABC, abstractmethod
 
 
 @dataclass
@@ -87,17 +87,30 @@ class MultiTurnWithHintsEnv(BaseEnv):
             "correct": self.correct,
         }
 
+    @abstractmethod
     def generate_prompt(self) -> str:
         pass
 
+    @abstractmethod
     def generate_hint(self) -> str:
         pass
 
+    @abstractmethod
     def has_final_result(self, action: str) -> bool:
         pass
 
+    @abstractmethod
     def generate_response(self, action: str) -> str:
         pass
 
+    @abstractmethod
     def score_response(self, action: str) -> float:
         pass
+
+
+class SingleTurnWithHintsEnv(MultiTurnWithHintsEnv):
+    def has_final_result(self, action: str) -> bool:
+        return True
+
+    def generate_response(self, action: str) -> str:
+        raise NotImplementedError()
