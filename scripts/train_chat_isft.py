@@ -113,12 +113,12 @@ def main(
         max_steps=training_args.num_iterations,
     )
 
-    # trainer = IterativeSFTTrainer(
-    #     model=agent.model,
-    #     tokenizer=agent.tokenizer,
-    #     args=trainer_config,
-    #     data_collator=agent.batch_inputs,
-    # )
+    trainer = IterativeSFTTrainer(
+        model=agent.model,
+        tokenizer=agent.tokenizer,
+        args=trainer_config,
+        data_collator=agent.batch_inputs,
+    )
 
     # wandb.init(
     #     project=training_args.wandb_project,
@@ -126,7 +126,7 @@ def main(
     # )
 
     for iteration in range(training_args.num_iterations):
-        # trainer.model.eval()
+        trainer.model.eval()
         torch.cuda.empty_cache()
 
         with torch.no_grad():

@@ -18,14 +18,14 @@ class MultiTurnWithHintsEnv(BaseEnv):
         self.max_attempts = max_attempts
 
     def reset(self):
-        prompt = self.generate_prompt()
-        self.prompt = prompt
-        self.cur_chat = [{"role": "user", "content": prompt}]
         self.done = False
         self.examples = []
         self.attempts = 0
         self.correct_first_attempt = False
         self.correct = False
+        prompt = self.generate_prompt()
+        self.prompt = prompt
+        self.cur_chat = [{"role": "user", "content": prompt}]
 
     def observe(self) -> List[Dict]:
         return self.cur_chat

@@ -32,17 +32,17 @@ class MetaMathGPTEvalHintsEnv(SingleTurnWithHintsEnv):
         question = loader.get_question()
         self.query = question["query"]
         self.answer = question["response"]
-        self.hint = "Hint: Think step by step"
-        prompt = self.query
-        # self.examples.append(
-        #     EnvExample(
-        #         chat=[
-        #             {"role": "user", "content": prompt},
-        #             {"role": "assistant", "content": self.answer},
-        #         ],
-        #         reward=1.0,
-        #     )
-        # )
+        self.hint = "Hint: Show your work"
+        prompt = self.query + '\n\nThink step by step.'
+        self.examples.append(
+            EnvExample(
+                chat=[
+                    {"role": "user", "content": prompt},
+                    {"role": "assistant", "content": self.answer},
+                ],
+                reward=1.0,
+            )
+        )
         return prompt
 
     def generate_hint(self) -> str:
